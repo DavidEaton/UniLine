@@ -119,7 +119,7 @@ namespace UniLine
         }
 
         // Process a single project: convert EOLs and aggregate source code.
-        private ProjectStatistics ProcessProject(string projectFolder, string projectName, string selectedEol, out string aggregatedText)
+        private static ProjectStatistics ProcessProject(string projectFolder, string projectName, string selectedEol, out string aggregatedText)
         {
             ProjectStatistics statistics = new();
             StringBuilder aggregatedLines = new();
@@ -127,6 +127,10 @@ namespace UniLine
 
             foreach (string file in Directory.EnumerateFiles(projectFolder, "*.*", SearchOption.AllDirectories))
             {
+                string relativeFilePath = file.Substring(projectFolder.Length + 1);
+                if (relativeFilePath.StartsWith("bin/") || relativeFilePath.StartsWith("obj/"))
+                    continue;
+
                 if (IsBinaryFile(file))
                     continue;
                 statistics.TotalFiles++;
@@ -144,7 +148,7 @@ namespace UniLine
                 // Count current EOL style.
                 if (content.Contains("\r\n"))
                     statistics.WinBefore++;
-                else if (content.Contains("\n"))
+                else if (content.Contains('\n'))
                     statistics.LinuxBefore++;
                 else
                     statistics.LinuxBefore++;
@@ -167,8 +171,11 @@ namespace UniLine
                     catch { }
                 }
 
-                aggregatedLines.AppendLine($"\n---\n### File: {file.Substring(projectFolder.Length + 1)}\n---\n");
+                aggregatedLines.AppendLine($"\n---\n### File: {relativeFilePath}\n---");
+                string fileExtension = Path.GetExtension(file).TrimStart('.');
+                aggregatedLines.AppendLine($"```{fileExtension}\n");
                 aggregatedLines.AppendLine(content);
+                aggregatedLines.AppendLine("\n```");
             }
             aggregatedText = aggregatedLines.ToString();
             return statistics;
